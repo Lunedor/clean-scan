@@ -116,7 +116,7 @@ def perform_deletion(groups):
 
 def review_menu(items):
     curr = 0
-    page_size = 5
+    page_size = 10
     while curr < len(items):
         end = min(curr + page_size, len(items))
         print(f"\n{BOLD}{CYAN}=== REVIEWING DUPLICATES {curr+1}-{end} (Total: {len(items)}) ==={RESET}")
@@ -135,7 +135,7 @@ def review_menu(items):
         print(f"  {YELLOW}page{RESET}     -> Delete this page")
         print(f"  {YELLOW}nuclear{RESET}  -> Delete ALL duplicates in entire scan")
         print(f"  {YELLOW}n{RESET}        -> Next Page")
-        print(f"  {YELLOW}b{RESET}        -> Previous Page")
+        print(f"  {YELLOW}p{RESET}        -> Previous Page")
         print(f"  {YELLOW}q{RESET}        -> Back to Main Menu")
         
         cmd = input("\nSelection > ").strip().lower()
@@ -144,7 +144,7 @@ def review_menu(items):
             if curr + page_size < len(items): curr += page_size
             else: print(f"{YELLOW}You are on the last page.{RESET}")
             continue
-        if cmd == 'b':
+        if cmd == 'p':
             curr = max(0, curr - page_size)
             continue
         
@@ -175,14 +175,14 @@ def review_empties(items):
         print(f"\n{CYAN}--- EMPTY FOLDERS {curr+1}-{end} ---{RESET}")
         for i in range(curr, end): print(f"[{i+1}] {items[i]}")
         
-        print(f"\n{BOLD}COMMANDS:{RESET} [indices], [page], [nuclear], [n] Next, [b] Previous, [q] Back")
+        print(f"\n{BOLD}COMMANDS:{RESET} [indices], [page], [nuclear], [n] Next, [p] Previous, [q] Back")
         cmd = input("Selection > ").strip().lower()
         
         if cmd == 'q': break
         if cmd == 'n': 
             if curr + page_size < len(items): curr += page_size
             continue
-        if cmd == 'b':
+        if cmd == 'p':
             curr = max(0, curr - page_size)
             continue
         
@@ -238,4 +238,5 @@ def main():
             break
 
 if __name__ == "__main__":
+
     main()
