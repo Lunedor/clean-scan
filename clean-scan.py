@@ -2,6 +2,7 @@
 import os
 import hashlib
 import argparse
+import math
 from collections import defaultdict
 from send2trash import send2trash
 
@@ -76,7 +77,6 @@ def find_duplicates(root, recursive):
     return final
 
 def find_empty_folders(root, recursive):
-    """Bottom-up scan to find empty folders."""
     empty = []
     if not os.path.isdir(root): return []
     if not recursive:
@@ -86,7 +86,7 @@ def find_empty_folders(root, recursive):
         return empty
 
     for d, subdirs, files in os.walk(root, topdown=False):
-        if d == root: continue # Avoid deleting the root scan folder itself
+        if d == root: continue 
         try:
             if not os.listdir(fix_path(d)): empty.append(d)
         except: pass
@@ -121,10 +121,13 @@ def perform_deletion(groups):
 
 def review_menu(items, root, recursive):
     curr = 0
-    page_size = 5
+    page_size = 10
     while curr < len(items):
+        total_pages = math.ceil(len(items) / page_size)
+        current_page = (curr // page_size) + 1
         end = min(curr + page_size, len(items))
-        print(f"\n{BOLD}{CYAN}=== REVIEW DUPLICATES {curr+1}-{end} (Total: {len(items)}) ==={RESET}")
+        
+        print(f"\n{BOLD}{CYAN}=== REVIEW DUPLICATES (Page {current_page} of {total_pages}) ==={RESET}")
         for i in range(curr, end):
             group = items[i]
             try:
@@ -133,13 +136,14 @@ def review_menu(items, root, recursive):
                 for path in group: print(f"    -> {path}")
             except: print(f"[{i+1}] Inaccessible")
 
-        print(f"\n{BOLD}COMMANDS:{RESET} [indices], [page], [nuclear], [n] Next, [b] Prev, [q] Back")
+        print(f"\n{BOLD}COMMANDS:{RESET} [indices], [page], [nuclear], [n] Next, [p] Prev, [q] Back")
         cmd = input("Selection > ").strip().lower()
         if cmd == 'q': break
         if cmd == 'n': 
             if curr + page_size < len(items): curr += page_size
+            else: print(f"{YELLOW}You are on the last page.{RESET}")
             continue
-        if cmd == 'b': curr = max(0, curr - page_size); continue
+        if cmd == 'p': curr = max(0, curr - page_size); continue
         
         selected, indices = [], []
         if cmd == 'nuclear':
@@ -160,15 +164,18 @@ def review_empties(items, root, recursive):
     curr = 0
     page_size = 10
     while curr < len(items):
+        total_pages = math.ceil(len(items) / page_size)
+        current_page = (curr // page_size) + 1
         end = min(curr + page_size, len(items))
-        print(f"\n{CYAN}--- REVIEW EMPTY FOLDERS {curr+1}-{end} (Total: {len(items)}) ---{RESET}")
+        
+        print(f"\n{CYAN}--- REVIEW EMPTY FOLDERS (Page {current_page} of {total_pages}) ---{RESET}")
         for i in range(curr, end): print(f"[{i+1}] {items[i]}")
-        cmd = input("\n[indices], [page], [nuclear], [n] Next, [b] Prev, [q] Back > ").strip().lower()
+        cmd = input("\n[indices], [page], [nuclear], [n] Next, [p] Prev, [q] Back > ").strip().lower()
         if cmd == 'q': break
         if cmd == 'n': 
             if curr + page_size < len(items): curr += page_size
             continue
-        if cmd == 'b': curr = max(0, curr - page_size); continue
+        if cmd == 'p': curr = max(0, curr - page_size); continue
         
         selected = []
         if cmd == 'nuclear': selected = items[:]
@@ -181,7 +188,6 @@ def review_empties(items, root, recursive):
             for d in selected:
                 try: send2trash(fix_path(d)); print(f"  🗑️ Removed: {d}")
                 except: pass
-            # RE-SCAN immediately to find folders that became empty because their subfolders were deleted
             items[:] = find_empty_folders(root, recursive)
             if not items: break
     return items
@@ -202,18 +208,36 @@ def main():
         print(f"\n{BOLD}{CYAN}===== DUPLICATE SCANNER: {root} ====={RESET}")
         print(f"Duplicates: {YELLOW}{len(dups)}{RESET} | Empty Folders: {YELLOW}{len(empties)}{RESET}")
         print(f"Total Recovered: {GREEN}{saved_mb:.2f} MB{RESET}")
-        print("1) Review Duplicates | 2) Review Empty Folders | 3) Refresh | 4) Exit")
+        print("-" * 50)
+        print("1) Review Duplicates (Largest First)")
+        print("2) Review Empty Folders")
+        print(f"3) {RED}FULL AUTO CLEAN (Duplicates & Empties){RESET}")
+        print("4) Refresh Scan")
+        print("5) Exit")
         
         choice = input("> ").strip()
         if choice == "1":
             review_menu(dups, root, args.recursive)
-            empties = find_empty_folders(root, args.recursive) # BUG FIX: Refresh after file deletion
+            empties = find_empty_folders(root, args.recursive) 
         elif choice == "2":
             empties = review_empties(empties, root, args.recursive)
         elif choice == "3":
+            confirm = input(f"{RED}⚠️ This will trash ALL duplicates and ALL empty folders. Proceed? (y/n): {RESET}").lower()
+            if confirm == 'y':
+                perform_deletion(dups)
+                dups = []
+                while True:
+                    current_empties = find_empty_folders(root, args.recursive)
+                    if not current_empties: break
+                    for d in current_empties:
+                        try: send2trash(fix_path(d))
+                        except: pass
+                empties = []
+                print(f"{GREEN}✅ System Cleaned.{RESET}")
+        elif choice == "4":
             dups = find_duplicates(root, args.recursive)
             empties = find_empty_folders(root, args.recursive)
-        elif choice == "4": break
+        elif choice == "5": break
 
 if __name__ == "__main__":
     main()
