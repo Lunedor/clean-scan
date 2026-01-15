@@ -1,3 +1,4 @@
+[![If you are a good person...](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/lunedor)
 # 🧹 Clean-Scan: Pro Duplicate & Empty Folder Remover
 
 **Clean-Scan** is a high-performance Python CLI tool designed for Windows power users. It helps you reclaim disk space by safely identifying identical files and cleaning up empty directory structures.
