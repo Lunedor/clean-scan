@@ -47,7 +47,7 @@ Inside the Review Menu, you have granular control:
 | page | Deletes every duplicate group currently visible on your screen. |
 | nuclear | Deletes every duplicate found in the entire scan (requires confirmation). |
 | n | Move to the Next page. |
-| b | Move to the Previous page. |
+| p | Move to the Previous page. |
 | q | Return to the main menu. |
 
 ---
