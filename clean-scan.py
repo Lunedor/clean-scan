@@ -5,6 +5,7 @@ import argparse
 import math
 from collections import defaultdict
 from send2trash import send2trash
+import datetime
 
 # Color codes for Windows CMD
 RED = "\033[91m"
@@ -149,6 +150,40 @@ def perform_deletion(groups):
         except: continue
     return count
 
+def inspect_and_trash(group):
+    global SPACE_SAVED_BYTES
+    print(f"\n{BOLD}{CYAN}=== INSPECTING DUPLICATE GROUP ==={RESET}")
+    
+    for i, path in enumerate(group):
+        try:
+            mtime = os.path.getmtime(fix_path(path))
+            date_str = datetime.datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M')
+            print(f"[{i+1}] {date_str} | {path}")
+        except Exception:
+            print(f"[{i+1}] Unknown Date | {path}")
+            
+    print(f"\n{YELLOW}Enter indices of files to TRASH (e.g., '1 3'), or 'q' to cancel:{RESET}")
+    cmd = input("> ").strip().lower()
+    if cmd == 'q' or not cmd: 
+        return False
+        
+    to_trash = parse_selection(cmd, len(group))
+    if not to_trash: 
+        return False
+        
+    for i in sorted(to_trash, reverse=True):
+        f = group[i-1]
+        try:
+            f_size = os.path.getsize(fix_path(f))
+            send2trash(fix_path(f))
+            print(f"  {RED}🗑️ Trashed:{RESET} {f}")
+            SPACE_SAVED_BYTES += f_size
+            group.pop(i-1)
+        except Exception: 
+            pass
+            
+    return True
+
 def review_menu(items, roots, recursive):
     curr = 0
     page_size = 10
@@ -184,19 +219,15 @@ def review_menu(items, roots, recursive):
         else:
             indices = parse_selection(cmd, len(items))
             
-            # TRIGGER DRILL-DOWN: If only one group is selected, open the inspection menu
             if len(indices) == 1:
                 idx = indices[0] - 1
                 target_group = items[idx]
                 
                 if inspect_and_trash(target_group):
-                    # If 1 or 0 files remain, it's no longer a duplicate group. Remove it from the main list.
                     if len(target_group) < 2:
                         items.pop(idx)
-                    curr = 0  # Reset pagination to prevent skipping
+                    curr = 0  
                 continue
-                
-            # TRIGGER BATCH AUTO-DELETE: If multiple groups are selected
             else:
                 selected = [items[i-1] for i in indices]
 
@@ -205,7 +236,7 @@ def review_menu(items, roots, recursive):
             for i in sorted(indices, reverse=True): items.pop(i-1)
             curr = 0  
             if cmd == 'nuclear': break
-
+            
 def review_empties(items, roots, recursive):
     curr = 0
     page_size = 10
@@ -238,40 +269,6 @@ def review_empties(items, roots, recursive):
             curr = 0  # FIX: Reset view after list mutation
             if not items: break
     return items
-
-def inspect_and_trash(group):
-    global SPACE_SAVED_BYTES
-    print(f"\n{BOLD}{CYAN}=== INSPECTING DUPLICATE GROUP ==={RESET}")
-    
-    for i, path in enumerate(group):
-        try:
-            mtime = os.path.getmtime(fix_path(path))
-            date_str = datetime.datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M')
-            print(f"[{i+1}] {date_str} | {path}")
-        except Exception:
-            print(f"[{i+1}] Unknown Date | {path}")
-            
-    print(f"\n{YELLOW}Enter indices of files to TRASH (e.g., '1 3'), or 'q' to cancel:{RESET}")
-    cmd = input("> ").strip().lower()
-    if cmd == 'q' or not cmd: 
-        return False
-        
-    to_trash = parse_selection(cmd, len(group))
-    if not to_trash: 
-        return False
-        
-    for i in sorted(to_trash, reverse=True):
-        f = group[i-1]
-        try:
-            f_size = os.path.getsize(fix_path(f))
-            send2trash(fix_path(f))
-            print(f"  {RED}🗑️ Trashed:{RESET} {f}")
-            SPACE_SAVED_BYTES += f_size
-            group.pop(i-1)
-        except Exception: 
-            pass
-            
-    return True # Indicates the group was modified
     
 def main():
     os.system('') 
